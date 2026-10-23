@@ -165,10 +165,16 @@ namespace alxnbl.OneNoteMdExporter.Infrastructure
 
         /// <summary>
         /// ADVANCED SETTING (Markdown export): convert EMF/WMF metafile attachments and images to PNG, which
-        /// Markdown viewers can display, and reference the PNG instead. The original metafile is always kept
-        /// next to the PNG. Set to false to leave metafiles untouched (they will not render in most viewers).
+        /// Markdown viewers can display, and reference the PNG instead. Also render XPS printout attachments to
+        /// one PNG per page, embedded under the attachment. The originals are always kept. Set to false to leave
+        /// metafiles and XPS untouched (they will not render in most viewers).
         /// </summary>
         public static bool ConvertLegacyFormats { get; set; } = true;
+
+        /// <summary>
+        /// ADVANCED SETTING: resolution in DPI used to render XPS printout attachments to PNG (ConvertLegacyFormats).
+        /// </summary>
+        public static int XpsRenderDpi { get; set; } = 150;
 
         /// <summary>
         /// ADVANCED SETTING (Markdown export): maximum full path length of an exported page file. A page whose

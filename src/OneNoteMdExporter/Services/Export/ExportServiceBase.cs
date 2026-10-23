@@ -261,6 +261,9 @@ namespace alxnbl.OneNoteMdExporter.Services.Export
                 // Make a PDF copy of Office file attachments and link it under the attachment
                 ConvertOfficeAttachments(page, ref pageMd);
 
+                // Render XPS printout attachments to PNG pages embedded under the attachment
+                ConvertXpsAttachments(page, ref pageMd);
+
                 // Apply post processing to Page Md content
                 ConverterService.PageMdPostConversion(ref pageMd);
 
@@ -427,6 +430,35 @@ namespace alxnbl.OneNoteMdExporter.Services.Export
 
             foreach (var w in warnings.Distinct())
                 Log.Warning($"Page '{page.TitleWithPageLevelTabulation}': {w}");
+        }
+
+        /// <summary>
+        /// For every XPS printout attachment, render one PNG per page next to it and embed the pages right after
+        /// the attachment's line in the markdown. The original XPS is kept. No-op unless ConvertLegacyFormats is
+        /// on and the export is Markdown.
+        /// </summary>
+        private void ConvertXpsAttachments(Page page, ref string pageMd)
+        {
+            if (!AppSettings.ConvertLegacyFormats || ExportFormatCode != "md")
+                return;
+
+            var mdDir = Path.GetDirectoryName(Path.GetFullPath(GetPageMdFilePath(page)));
+
+            foreach (var attach in page.FileAttachements.ToList())
+            {
+                var filePath = GetAttachmentFilePath(attach);
+                if (!File.Exists(filePath) || !LegacyFormatConverter.IsXps(filePath))
+                    continue;
+
+                var pngs = LegacyFormatConverter.ConvertXpsToPngs(filePath, AppSettings.XpsRenderDpi);
+                if (pngs.Count == 0)
+                    continue;
+
+                var name = Path.GetFileNameWithoutExtension(filePath);
+                var embeds = string.Join(Environment.NewLine + Environment.NewLine,
+                    pngs.Select((p, i) => $"![{name} page {i + 1}]({Path.GetRelativePath(mdDir, Path.GetFullPath(p)).Replace('\\', '/')})"));
+                pageMd = InsertAfterLineContaining(pageMd, GetAttachmentMdReference(attach), embeds);
+            }
         }
 
         /// <summary>Insert a line of markdown right after the line that contains <paramref name="marker"/>, or at the end if not found.</summary>

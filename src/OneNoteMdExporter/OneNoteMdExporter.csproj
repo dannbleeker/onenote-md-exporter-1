@@ -15,6 +15,9 @@
     <AssemblyName>OneNoteMdExporter</AssemblyName>
     <RootNamespace>alxnbl.OneNoteMdExporter</RootNamespace>
     <NoWin32Manifest>true</NoWin32Manifest>
+    <!-- WPF is used only to render XPS printout attachments to PNG (LegacyFormatConverter.ConvertXpsToPngs).
+         XPS reading (System.Windows.Xps) lives in the WPF/Windows Desktop stack, so the project enables WPF. -->
+    <UseWPF>true</UseWPF>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
@@ -81,7 +84,8 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
+    <!-- System.Drawing.Common (used by LegacyFormatConverter for EMF/WMF) is provided by the Windows Desktop
+         framework once UseWPF is enabled, so no explicit package reference is needed. -->
     <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1" />
     <PackageReference Include="Serilog.Enrichers.Thread" Version="4.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />

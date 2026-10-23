@@ -203,6 +203,12 @@ namespace alxnbl.OneNoteMdExporter.Infrastructure
         public static int XpsRenderDpi { get; set; } = 150;
 
         /// <summary>
+        /// ADVANCED SETTING (Markdown export): write an "_index.md" in each section folder listing its pages in
+        /// OneNote order (indented by page level), and one at the notebook root listing its sections. Default false.
+        /// </summary>
+        public static bool WriteIndexNotes { get; set; } = false;
+
+        /// <summary>
         /// ADVANCED SETTING (Markdown export): resolve links between exported pages. Links to other OneNote pages
         /// are written as placeholders during export and, after the whole run, rewritten to plain relative links
         /// that work in any tool — so a link to a page exported later (another notebook, a sub-page) is not lost.

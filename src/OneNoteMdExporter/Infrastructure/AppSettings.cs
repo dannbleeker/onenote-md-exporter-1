@@ -203,6 +203,13 @@ namespace alxnbl.OneNoteMdExporter.Infrastructure
         public static int XpsRenderDpi { get; set; } = 150;
 
         /// <summary>
+        /// ADVANCED SETTING (Markdown export): a clean-up pass on the generated markdown — unescape the "\&lt;" /
+        /// "\&gt;" PanDoc emits, unwrap default-style and empty span noise from pasted Outlook/Word content, and
+        /// renumber ordered lists PanDoc writes as "1. 1. 1.". Fenced code blocks are left untouched. Default false.
+        /// </summary>
+        public static bool MarkdownCleanup { get; set; } = false;
+
+        /// <summary>
         /// ADVANCED SETTING (Markdown export): maximum full path length of an exported page file. A page whose
         /// path would be longer is shortened (its file name is cut and a short hash keeps it unique), and if the
         /// folder alone is already too long the page is written to a "_long-paths" folder at the root of the

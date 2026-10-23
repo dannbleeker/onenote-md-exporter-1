@@ -270,6 +270,10 @@ namespace alxnbl.OneNoteMdExporter.Services.Export
                 // Apply post processing to Page Md content
                 ConverterService.PageMdPostConversion(ref pageMd);
 
+                // Optional clean-up pass: unescape PanDoc's \< \>, strip span noise, renumber "1. 1. 1." lists
+                if (AppSettings.MarkdownCleanup && ExportFormatCode == "md")
+                    pageMd = MarkdownCleanup.CleanupMarkdown(pageMd);
+
                 // Convert OneNote:// links to markdown links
                 pageMd = oneNoteLinkTranslatorService.ConvertOneNoteLinks(pageMd, GetPageWikilink);
 

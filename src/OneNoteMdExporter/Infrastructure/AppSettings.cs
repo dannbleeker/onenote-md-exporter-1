@@ -160,8 +160,34 @@ namespace alxnbl.OneNoteMdExporter.Infrastructure
         /// <summary>
         /// ADVANCED SETTING: timeout in seconds for a single Office-to-PDF conversion. A conversion that does not
         /// finish in time is abandoned and its Office instance killed, so one bad file cannot hang the export.
+        /// Also the base timeout for ffmpeg media conversions (multiplied for the longer media runs).
         /// </summary>
         public static int ConversionTimeoutSeconds { get; set; } = 180;
+
+        /// <summary>
+        /// ADVANCED SETTING: path to ffmpeg (used for media copies and transcription). "ffmpeg" finds it on PATH
+        /// (or the registry PATH / winget links). All media features are skipped when ffmpeg is not found.
+        /// </summary>
+        public static string FfmpegPath { get; set; } = "ffmpeg";
+
+        /// <summary>
+        /// ADVANCED SETTING (Markdown export, needs ffmpeg): audio attachment extensions to also copy as MP3 next
+        /// to the original (e.g. [".wma"]). Empty = no audio conversion (the default).
+        /// </summary>
+        public static string[] AudioToMp3Extensions { get; set; } = System.Array.Empty<string>();
+
+        /// <summary>
+        /// ADVANCED SETTING (Markdown export, needs ffmpeg): video attachment extensions to also copy as MP4 next
+        /// to the original (e.g. [".wmv"]). Empty = no video conversion (the default).
+        /// </summary>
+        public static string[] VideoToMp4Extensions { get; set; } = System.Array.Empty<string>();
+
+        /// <summary>
+        /// ADVANCED SETTING (needs ffmpeg): command line to transcribe a media attachment. {input} is a 16 kHz
+        /// mono WAV ffmpeg prepares, {output} is the transcript path stem; the tool must write &lt;stem&gt;.txt. Empty
+        /// = no transcription (the default). Example: whisper-cli -m model.bin -f {input} -otxt -of {output}
+        /// </summary>
+        public static string TranscriptionCommand { get; set; } = "";
 
         /// <summary>
         /// ADVANCED SETTING (Markdown export): convert EMF/WMF metafile attachments and images to PNG, which

@@ -264,6 +264,9 @@ namespace alxnbl.OneNoteMdExporter.Services.Export
                 // Render XPS printout attachments to PNG pages embedded under the attachment
                 ConvertXpsAttachments(page, ref pageMd);
 
+                // Copy audio/video attachments to MP3/MP4 and, if configured, append a machine transcript
+                ConvertMediaAttachments(page, ref pageMd);
+
                 // Apply post processing to Page Md content
                 ConverterService.PageMdPostConversion(ref pageMd);
 
@@ -459,6 +462,51 @@ namespace alxnbl.OneNoteMdExporter.Services.Export
                     pngs.Select((p, i) => $"![{name} page {i + 1}]({Path.GetRelativePath(mdDir, Path.GetFullPath(p)).Replace('\\', '/')})"));
                 pageMd = InsertAfterLineContaining(pageMd, GetAttachmentMdReference(attach), embeds);
             }
+        }
+
+        /// <summary>
+        /// For audio/video file attachments: copy to MP3/MP4 next to the original (ffmpeg) and link it under the
+        /// attachment; and, if a transcription command is configured, append a machine transcript at the end of
+        /// the page. No-op unless the export is Markdown and at least one media option is configured.
+        /// </summary>
+        private void ConvertMediaAttachments(Page page, ref string pageMd)
+        {
+            if (ExportFormatCode != "md")
+                return;
+
+            var mdDir = Path.GetDirectoryName(Path.GetFullPath(GetPageMdFilePath(page)));
+            var warnings = new List<string>();
+            var transcripts = new List<string>();
+
+            foreach (var attach in page.FileAttachements.ToList())
+            {
+                var filePath = GetAttachmentFilePath(attach);
+                if (!File.Exists(filePath))
+                    continue;
+
+                var isAudio = MediaConverter.IsAudioToConvert(filePath);
+                var isVideo = MediaConverter.IsVideoToConvert(filePath);
+                if (!isAudio && !isVideo)
+                    continue;
+
+                var copy = isVideo ? MediaConverter.ToMp4(filePath, warnings) : MediaConverter.ToMp3(filePath, warnings);
+                if (copy != null)
+                {
+                    var copyRef = Path.GetRelativePath(mdDir, Path.GetFullPath(copy)).Replace('\\', '/');
+                    pageMd = InsertAfterLineContaining(pageMd, GetAttachmentMdReference(attach), $"{(isVideo ? "MP4" : "MP3")} copy: [{Path.GetFileName(copy)}]({copyRef})");
+                }
+
+                var transcript = MediaConverter.Transcribe(filePath, warnings);
+                if (!string.IsNullOrWhiteSpace(transcript))
+                    transcripts.Add($"## Transcript of {attach.FriendlyFileName}" + Environment.NewLine + Environment.NewLine
+                        + "*Machine transcription (may contain errors).*" + Environment.NewLine + Environment.NewLine + transcript);
+            }
+
+            if (transcripts.Count > 0)
+                pageMd = pageMd.TrimEnd() + Environment.NewLine + Environment.NewLine + string.Join(Environment.NewLine + Environment.NewLine, transcripts) + Environment.NewLine;
+
+            foreach (var w in warnings.Distinct())
+                Log.Warning($"Page '{page.TitleWithPageLevelTabulation}': {w}");
         }
 
         /// <summary>Insert a line of markdown right after the line that contains <paramref name="marker"/>, or at the end if not found.</summary>

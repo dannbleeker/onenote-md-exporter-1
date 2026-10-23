@@ -203,6 +203,13 @@ namespace alxnbl.OneNoteMdExporter.Infrastructure
         public static int XpsRenderDpi { get; set; } = 150;
 
         /// <summary>
+        /// ADVANCED SETTING (Markdown export): write VAULT.md at the export root — a plain-text description of the
+        /// archive layout, the metadata, the known limits and the settings used, plus a log table with one row per
+        /// notebook export run. Default false.
+        /// </summary>
+        public static bool WriteVaultReadme { get; set; } = false;
+
+        /// <summary>
         /// ADVANCED SETTING (Markdown export): write an "_index.md" in each section folder listing its pages in
         /// OneNote order (indented by page level), and one at the notebook root listing its sections. Default false.
         /// </summary>

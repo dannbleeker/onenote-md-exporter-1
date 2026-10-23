@@ -107,7 +107,8 @@ namespace alxnbl.OneNoteMdExporter.Services.Export
                 Log.Information($"- {Localizer.GetString("Page")} {++cmptPage}/{allPages.Count} : {page.Parent.Title} / {page.TitleWithPageLevelTabulation}");
                 var success = ExportPage(page);
 
-                if (!success) result.PagesOnError++;
+                if (success) result.PagesExported++;
+                else result.PagesOnError++;
             }
 
             // Record this notebook's page id => file map, used by LinkRepair after the whole run
@@ -119,6 +120,13 @@ namespace alxnbl.OneNoteMdExporter.Services.Export
             {
                 try { WriteIndexNotes(notebook, sections, allPages); }
                 catch (Exception ex) { Log.Warning($"Writing index notes for '{notebook.Title}' failed: {ex.Message}"); }
+            }
+
+            // Describe the archive in VAULT.md at the export root and log this run
+            if (AppSettings.WriteVaultReadme)
+            {
+                try { VaultReadme.Write(notebook.ExportFolder, notebook, result); }
+                catch (Exception ex) { Log.Warning($"Writing {VaultReadme.FileName} for '{notebook.Title}' failed: {ex.Message}"); }
             }
 
             return result;

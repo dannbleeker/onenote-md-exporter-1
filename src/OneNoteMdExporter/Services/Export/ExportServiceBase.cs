@@ -255,6 +255,9 @@ namespace alxnbl.OneNoteMdExporter.Services.Export
                 // Export all file attachments and get updated page markdown including md reference to attachments
                 ExportPageAttachments(page, ref pageMd);
 
+                // Convert EMF/WMF metafiles written for this page to PNG and point the markdown at the PNG
+                ConvertLegacyImages(page, ref pageMd);
+
                 // Apply post processing to Page Md content
                 ConverterService.PageMdPostConversion(ref pageMd);
 
@@ -354,12 +357,41 @@ namespace alxnbl.OneNoteMdExporter.Services.Export
                     // the path is deterministic, so link to it now.
                     return Path.GetRelativePath(mdDir, GetAttachmentFilePath(attachment)).Replace('\\', '/');
                 },
+                DisplayableCopy = imagePath =>
+                    AppSettings.ConvertLegacyFormats && LegacyFormatConverter.IsMetafile(imagePath)
+                        ? LegacyFormatConverter.ConvertMetafileToPng(imagePath)
+                        : null, // an EMF/WMF image embedded in the page XML: show a PNG copy, keep the original
             };
 
             var md = XmlMarkdownRenderer.Render(xml, ns, options, warnings);
             foreach (var warning in warnings.Distinct())
                 Log.Warning($"Page '{page.TitleWithPageLevelTabulation}': {warning}");
             return md;
+        }
+
+        /// <summary>
+        /// For every attachment of the page whose file on disk is an EMF/WMF metafile, render a PNG next to it
+        /// and point the markdown reference at the PNG. The original metafile is kept. No-op unless
+        /// ConvertLegacyFormats is on and the export is Markdown.
+        /// </summary>
+        private void ConvertLegacyImages(Page page, ref string pageMd)
+        {
+            if (!AppSettings.ConvertLegacyFormats || ExportFormatCode != "md")
+                return;
+
+            foreach (var attach in page.Attachements.ToList())
+            {
+                var filePath = GetAttachmentFilePath(attach);
+                if (!File.Exists(filePath) || !LegacyFormatConverter.IsMetafile(filePath))
+                    continue;
+
+                var png = LegacyFormatConverter.ConvertMetafileToPng(filePath);
+                if (png == null)
+                    continue;
+
+                var oldRef = GetAttachmentMdReference(attach);
+                pageMd = pageMd.Replace(oldRef, Path.ChangeExtension(oldRef, ".png"));
+            }
         }
 
         protected abstract string GetPageWikilink(string linkText, string mdFilePath, string pageId);

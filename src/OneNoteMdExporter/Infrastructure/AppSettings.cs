@@ -145,6 +145,13 @@ namespace alxnbl.OneNoteMdExporter.Infrastructure
         public static bool ResumeExport { get; set; } = false;
 
         /// <summary>
+        /// ADVANCED SETTING (Markdown export): convert EMF/WMF metafile attachments and images to PNG, which
+        /// Markdown viewers can display, and reference the PNG instead. The original metafile is always kept
+        /// next to the PNG. Set to false to leave metafiles untouched (they will not render in most viewers).
+        /// </summary>
+        public static bool ConvertLegacyFormats { get; set; } = true;
+
+        /// <summary>
         /// ADVANCED SETTING (Markdown export): maximum full path length of an exported page file. A page whose
         /// path would be longer is shortened (its file name is cut and a short hash keeps it unique), and if the
         /// folder alone is already too long the page is written to a "_long-paths" folder at the root of the

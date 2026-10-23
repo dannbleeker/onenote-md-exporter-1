@@ -130,6 +130,20 @@ namespace alxnbl.OneNoteMdExporter.Infrastructure
         /// </summary>
         public static bool XmlFallbackRenderer { get; set; } = true;
 
+        /// <summary>
+        /// ADVANCED SETTING (Markdown export): a fixed export root folder (set by --output). When empty, each
+        /// export goes to a new timestamped folder under "Exports" (the default). When set, the notebook is
+        /// always exported to the same folder, which is what makes --resume able to continue it.
+        /// </summary>
+        public static string ExportRootFolder { get; set; } = "";
+
+        /// <summary>
+        /// ADVANCED SETTING (Markdown export, needs ExportRootFolder / --output): continue an interrupted
+        /// export in that folder -- skip the pages already recorded in the notebook's export journal and
+        /// export the rest -- instead of cleaning the folder and starting over.
+        /// </summary>
+        public static bool ResumeExport { get; set; } = false;
+
         /*
          * Developer Settings
          * */

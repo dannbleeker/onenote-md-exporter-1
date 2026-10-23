@@ -48,11 +48,65 @@ namespace alxnbl.OneNoteMdExporter.Services.Export
 
         protected abstract string GetPageMdFilePath(Page page);
 
+        /// <summary>
+        /// Journal of completed pages for the notebook being exported, used by --resume. Null unless a fixed
+        /// output folder (ExportRootFolder) is in use for a Markdown export.
+        /// </summary>
+        protected ExportJournal Journal { get; private set; }
+
+        /// <summary>
+        /// Marks a fixed output folder as belonging to one notebook, so two notebooks cannot share and clean it.
+        /// </summary>
+        public const string NotebookMarkerFileName = ".notebook-name";
 
         public NotebookExportResult ExportNotebook(Notebook notebook, string sectionNameFilter = "", string pageNameFilter = "")
         {
-            notebook.ExportFolder = @$"{Localizer.GetString("ExportFolder")}\{ExportFormatCode}\{notebook.GetNotebookPath()}-{DateTime.Now:yyyyMMdd HH-mm}";
-            CleanUpFolder(notebook);
+            // A fixed output folder and --resume apply to the Markdown export only. A Joplin export keeps the
+            // upstream behaviour: a new timestamped folder each run (its note ids are regenerated every run).
+            var useFixedFolder = !string.IsNullOrWhiteSpace(AppSettings.ExportRootFolder) && ExportFormatCode == "md";
+            var resume = useFixedFolder && AppSettings.ResumeExport;
+
+            if (useFixedFolder)
+                notebook.ExportFolder = Path.GetFullPath(AppSettings.ExportRootFolder);
+            else
+                notebook.ExportFolder = @$"{Localizer.GetString("ExportFolder")}\{ExportFormatCode}\{notebook.GetNotebookPath()}-{DateTime.Now:yyyyMMdd HH-mm}";
+
+            var notebookFolder = GetNotebookFolderPath(notebook);
+
+            // A notebook folder belongs to one notebook. Two notebooks whose names are equal once cut to
+            // MdMaxFileLength, exported to the same fixed root, would otherwise share it and clean each other.
+            var markerPath = Path.Combine(notebookFolder, NotebookMarkerFileName);
+            if (useFixedFolder && File.Exists(markerPath))
+            {
+                var owner = File.ReadAllText(markerPath).Trim();
+                if (owner.Length > 0 && !string.Equals(owner, notebook.Title, StringComparison.Ordinal))
+                    return new NotebookExportResult
+                    {
+                        NoteBookExportErrorCode = "FolderOfOtherNotebook",
+                        NoteBookExportErrorMessage = $"'{notebookFolder}' holds the export of notebook '{owner}', not '{notebook.Title}'. Rename one of the notebooks in OneNote or export to another --output folder."
+                    };
+            }
+
+            var canResume = resume && File.Exists(Path.Combine(notebookFolder, ExportJournal.FileName));
+            if (canResume)
+            {
+                // Keep what was already exported, only clean the temp folder
+                DirectoryHelper.ClearFolder(GetTmpFolder(notebook));
+            }
+            else
+            {
+                if (resume)
+                    Log.Information($"No previous export found in '{notebookFolder}', starting a full export");
+                CleanUpFolder(notebook);
+            }
+
+            if (useFixedFolder)
+            {
+                Directory.CreateDirectory(notebookFolder);
+                File.WriteAllText(markerPath, notebook.Title ?? "", new System.Text.UTF8Encoding(false));
+            }
+
+            Journal = useFixedFolder ? new ExportJournal(notebookFolder, canResume) : null;
 
             // Initialize hierarchy of the notebook from OneNote APIs
             try
@@ -96,6 +150,14 @@ namespace alxnbl.OneNoteMdExporter.Services.Export
         /// <returns>True if the export finished with success</returns>
         protected bool ExportPage(Page page, bool retry = false)
         {
+            // Resume: if this page was fully exported in a previous run and its file is still there, skip it.
+            // Checked before the page content is fetched from OneNote, so a resumed page costs nothing.
+            if (!retry && Journal != null && Journal.IsCompleted(page, GetPageMdFilePath(page)))
+            {
+                Log.Information($"Page '{page.GetPageFileRelativePath(AppSettings.MdMaxFileLength)}': already exported, skipped (resume)");
+                return true;
+            }
+
             try
             {
                 OneNoteApp.Instance.GetPageContent(page.OneNoteId, out var xmlPageContentStr, PageInfo.piBinaryDataFileType);
@@ -200,6 +262,9 @@ namespace alxnbl.OneNoteMdExporter.Services.Export
                 pageMd = FinalizePageMdPostProcessing(page, pageMd);
 
                 WritePageMdFile(page, pageMd);
+
+                // Resume: record the page as complete only now, after its md file and attachments are on disk
+                Journal?.MarkCompleted(page, GetPageMdFilePath(page));
 
                 return true;
             }

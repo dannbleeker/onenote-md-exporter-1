@@ -274,8 +274,9 @@ namespace alxnbl.OneNoteMdExporter.Services.Export
                 if (AppSettings.MarkdownCleanup && ExportFormatCode == "md")
                     pageMd = MarkdownCleanup.CleanupMarkdown(pageMd);
 
-                // Convert OneNote:// links to markdown links
-                pageMd = oneNoteLinkTranslatorService.ConvertOneNoteLinks(pageMd, GetPageWikilink);
+                // Convert OneNote:// links to markdown links. With RepairLinks (Markdown export), write page links
+                // as placeholders that LinkRepair resolves after the run, so a link to a page exported later survives.
+                pageMd = oneNoteLinkTranslatorService.ConvertOneNoteLinks(pageMd, GetPageWikilink, AppSettings.RepairLinks && ExportFormatCode == "md");
 
                 // Apply post processing specific to an export format
                 pageMd = FinalizePageMdPostProcessing(page, pageMd);

@@ -196,6 +196,10 @@ namespace alxnbl.OneNoteMdExporter
                 }
             }
 
+            // Resolve cross-page link placeholders once every notebook of this run is on disk
+            if (AppSettings.RepairLinks)
+                Services.Export.LinkRepair.RepairAll(notebookToProcess);
+
             if (!AppSettings.Debug && !AppSettings.KeepOneNoteTempFiles)
             {
                 TemporaryNotebook.CleanUp();

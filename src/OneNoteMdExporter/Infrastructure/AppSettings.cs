@@ -203,6 +203,14 @@ namespace alxnbl.OneNoteMdExporter.Infrastructure
         public static int XpsRenderDpi { get; set; } = 150;
 
         /// <summary>
+        /// ADVANCED SETTING (Markdown export): resolve links between exported pages. Links to other OneNote pages
+        /// are written as placeholders during export and, after the whole run, rewritten to plain relative links
+        /// that work in any tool — so a link to a page exported later (another notebook, a sub-page) is not lost.
+        /// Default false (links to pages not yet exported are dropped, as before).
+        /// </summary>
+        public static bool RepairLinks { get; set; } = false;
+
+        /// <summary>
         /// ADVANCED SETTING (Markdown export): a clean-up pass on the generated markdown — unescape the "\&lt;" /
         /// "\&gt;" PanDoc emits, unwrap default-style and empty span noise from pasted Outlook/Word content, and
         /// renumber ordered lists PanDoc writes as "1. 1. 1.". Fenced code blocks are left untouched. Default false.

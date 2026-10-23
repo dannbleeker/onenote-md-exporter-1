@@ -173,6 +173,9 @@ namespace alxnbl.OneNoteMdExporter.Services.Export
                 // Suffix page title
                 EnsurePageUniquenessPerSection(page);
 
+                // Keep the page's full path under MaxPathLength (no-op unless the setting is > 0)
+                ApplyPathLengthGuard(page);
+
                 if (!AppSettings.DisablePageXmlPreProcessing)
                 {
                     // Make various OneNote XML fixes before page export
@@ -822,6 +825,54 @@ namespace alxnbl.OneNoteMdExporter.Services.Export
         /// </summary>
         /// <param name="page">The parent Page</param>
         /// <param name="attach">The attachment</param>
+        /// <summary>
+        /// Keep a page's full path under AppSettings.MaxPathLength. First shortens the file name (with a short
+        /// hash to stay unique); if the folder itself is already too long, the page is written to a "_long-paths"
+        /// folder at the root of the notebook folder. Room is reserved next to the md file for the resources
+        /// folder and attachment file names. No-op unless MaxPathLength > 0 and the export is Markdown.
+        /// </summary>
+        private void ApplyPathLengthGuard(Page page)
+        {
+            if (AppSettings.MaxPathLength <= 0 || ExportFormatCode != "md")
+                return;
+
+            // Room needed next to the md file: "\<resources>\" + 32-char id + extension (generously "-p99.png")
+            var attachmentMargin = AppSettings.ResourceFolderName.Length + 2 + 32 + 10;
+
+            var mdPath = Path.GetFullPath(GetPageMdFilePath(page));
+            var limit = AppSettings.MaxPathLength;
+
+            if (mdPath.Length + attachmentMargin <= limit)
+                return;
+
+            var dir = Path.GetDirectoryName(mdPath);
+            var stem = Path.GetFileNameWithoutExtension(mdPath);
+            var hash = ShortHash(page.OneNoteId ?? page.Id);
+            var available = limit - attachmentMargin - dir.Length - 1 - ".md".Length - hash.Length - 1;
+
+            string newPath;
+            if (available >= 12)
+            {
+                newPath = Path.Combine(dir, stem[..Math.Min(stem.Length, available)].TrimEnd() + "~" + hash + ".md");
+            }
+            else
+            {
+                var overflowDir = Path.Combine(Path.GetFullPath(GetNotebookFolderPath(page.GetNotebook())), "_long-paths");
+                var availableOverflow = limit - attachmentMargin - overflowDir.Length - 1 - ".md".Length - hash.Length - 1;
+                newPath = Path.Combine(overflowDir, stem[..Math.Clamp(availableOverflow, 0, stem.Length)].TrimEnd() + "~" + hash + ".md");
+            }
+
+            Log.Warning($"Page '{page.Title}': path too long ({mdPath.Length} chars + {attachmentMargin} reserved for attachments > MaxPathLength {limit}), exported as '{newPath}'");
+            page.OverridePageFilePath = newPath;
+        }
+
+        /// <summary>First 8 hex characters of the SHA-1 of the value, lower-case; used to keep a shortened file name unique.</summary>
+        private static string ShortHash(string value)
+        {
+            var hash = System.Security.Cryptography.SHA1.HashData(System.Text.Encoding.UTF8.GetBytes(value ?? ""));
+            return Convert.ToHexString(hash)[..8].ToLowerInvariant();
+        }
+
         private void EnsurePageUniquenessPerSection(Page page)
         {
             var notUseFileNameFound = false;

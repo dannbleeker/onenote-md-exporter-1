@@ -144,6 +144,15 @@ namespace alxnbl.OneNoteMdExporter.Infrastructure
         /// </summary>
         public static bool ResumeExport { get; set; } = false;
 
+        /// <summary>
+        /// ADVANCED SETTING (Markdown export): maximum full path length of an exported page file. A page whose
+        /// path would be longer is shortened (its file name is cut and a short hash keeps it unique), and if the
+        /// folder alone is already too long the page is written to a "_long-paths" folder at the root of the
+        /// notebook folder. Room is reserved for the resources folder and attachment file names. 0 disables the
+        /// guard (the default). The classic Windows path limit is 260.
+        /// </summary>
+        public static int MaxPathLength { get; set; } = 0;
+
         /*
          * Developer Settings
          * */

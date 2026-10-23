@@ -145,6 +145,25 @@ namespace alxnbl.OneNoteMdExporter.Infrastructure
         public static bool ResumeExport { get; set; } = false;
 
         /// <summary>
+        /// ADVANCED SETTING (Markdown export, needs Word/Excel/PowerPoint installed): make a PDF copy of each
+        /// Office file attachment (.docx, .xlsx, .pptx, …) next to it and link it under the attachment, so the
+        /// content stays readable without Office. The original file is always kept. Default false.
+        /// </summary>
+        public static bool ConvertOfficeToPdf { get; set; } = false;
+
+        /// <summary>
+        /// ADVANCED SETTING: restrict ConvertOfficeToPdf to these extensions (e.g. [".docx", ".pptx"]). Empty = all
+        /// supported Office formats.
+        /// </summary>
+        public static string[] OfficeToPdfExtensions { get; set; } = System.Array.Empty<string>();
+
+        /// <summary>
+        /// ADVANCED SETTING: timeout in seconds for a single Office-to-PDF conversion. A conversion that does not
+        /// finish in time is abandoned and its Office instance killed, so one bad file cannot hang the export.
+        /// </summary>
+        public static int ConversionTimeoutSeconds { get; set; } = 180;
+
+        /// <summary>
         /// ADVANCED SETTING (Markdown export): convert EMF/WMF metafile attachments and images to PNG, which
         /// Markdown viewers can display, and reference the PNG instead. The original metafile is always kept
         /// next to the PNG. Set to false to leave metafiles untouched (they will not render in most viewers).

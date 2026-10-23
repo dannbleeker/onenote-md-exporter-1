@@ -258,6 +258,9 @@ namespace alxnbl.OneNoteMdExporter.Services.Export
                 // Convert EMF/WMF metafiles written for this page to PNG and point the markdown at the PNG
                 ConvertLegacyImages(page, ref pageMd);
 
+                // Make a PDF copy of Office file attachments and link it under the attachment
+                ConvertOfficeAttachments(page, ref pageMd);
+
                 // Apply post processing to Page Md content
                 ConverterService.PageMdPostConversion(ref pageMd);
 
@@ -392,6 +395,50 @@ namespace alxnbl.OneNoteMdExporter.Services.Export
                 var oldRef = GetAttachmentMdReference(attach);
                 pageMd = pageMd.Replace(oldRef, Path.ChangeExtension(oldRef, ".png"));
             }
+        }
+
+        /// <summary>
+        /// For every Office file attachment, make a PDF copy next to it (via the installed Office) and insert a
+        /// link to the PDF right after the attachment's line in the markdown. The original file is kept. No-op
+        /// unless ConvertOfficeToPdf is on and the export is Markdown.
+        /// </summary>
+        private void ConvertOfficeAttachments(Page page, ref string pageMd)
+        {
+            if (!AppSettings.ConvertOfficeToPdf || ExportFormatCode != "md")
+                return;
+
+            var mdDir = Path.GetDirectoryName(Path.GetFullPath(GetPageMdFilePath(page)));
+            var warnings = new List<string>();
+
+            foreach (var attach in page.FileAttachements.ToList())
+            {
+                var filePath = GetAttachmentFilePath(attach);
+                if (!File.Exists(filePath) || !OfficeToPdfConverter.IsOfficeFile(filePath))
+                    continue;
+
+                var pdf = OfficeToPdfConverter.OfficeToPdf(filePath, warnings);
+                if (pdf == null)
+                    continue;
+
+                var pdfRef = Path.GetRelativePath(mdDir, Path.GetFullPath(pdf)).Replace('\\', '/');
+                var oldRef = GetAttachmentMdReference(attach);
+                pageMd = InsertAfterLineContaining(pageMd, oldRef, $"PDF copy: [{Path.GetFileName(pdf)}]({pdfRef})");
+            }
+
+            foreach (var w in warnings.Distinct())
+                Log.Warning($"Page '{page.TitleWithPageLevelTabulation}': {w}");
+        }
+
+        /// <summary>Insert a line of markdown right after the line that contains <paramref name="marker"/>, or at the end if not found.</summary>
+        private static string InsertAfterLineContaining(string md, string marker, string toInsert)
+        {
+            var idx = md.IndexOf(marker, StringComparison.Ordinal);
+            if (idx < 0)
+                return md + Environment.NewLine + Environment.NewLine + toInsert + Environment.NewLine;
+
+            var lineEnd = md.IndexOf('\n', idx);
+            if (lineEnd < 0) lineEnd = md.Length;
+            return md[..lineEnd] + Environment.NewLine + Environment.NewLine + toInsert + Environment.NewLine + md[lineEnd..];
         }
 
         protected abstract string GetPageWikilink(string linkText, string mdFilePath, string pageId);

@@ -89,6 +89,7 @@ namespace alxnbl.OneNoteMdExporter
             try
             {
                 AppDomain.CurrentDomain.ProcessExit += new EventHandler((_, _) => OneNoteApp.CleanUp());
+                AppDomain.CurrentDomain.ProcessExit += new EventHandler((_, _) => Services.OfficeToPdfConverter.CloseOffice());
                 OneNoteApp.RenewInstance();
                 Log.Debug("OneNote instance renewed successfully");
             }
